@@ -1,0 +1,113 @@
+*2023-08-18*
+
+Implementing `setDate` when we already have implemented `setTime` is easy, isn't it?
+
+In `setTime` I used a very clever trick to make sure my hours don't go to 24 and return to 0 after 23.
+Just use `hour % 24` and you'll never get `hour` more than 23.
+
+So far so good, but what if I am already at hour 0 and want to do down?
+A-ha! Another clever trick: use `(hour + 24) % 24` and you'll always be between 0 and 23.
+
+The same worked just fine for minutes.
+Replace 24 with 60 and you are good.
+
+With months it should be the same, right?
+Just use `(month + 12) % 12` and you're good.
+
+Hmmm... not really. We don't have a month number 0.
+And I want it to really show the month number 12.
+
+Looks like "off by one" error to me.
+I have to add 1 somewhere.
+How about this: `month = (month+delta+12)%12 + 1`?
+
+Hmmm... I add `delta` every time I receive a message from the `Dir` channel.
+If I also add 1 every time I'll be jumping by 2 not by 1. Not good.
+
+Okay, let's remove 1 before adding it: `month = (month+delta-1+12)%12 + 1`
+
+It works, but it looks too clever. I can't explain it even to myself.
+
+Well, what about this idea: I create an array with months numbers from 1 to 12.
+I'll use `i` as the array index that will go from 0 to `len(array)-1`.
+My clever trick with the remainder will be applied to the index, not to the numbers themselves.
+And with this approach I can use it with any array, such as array of strings, for example.
+
+Nice! I think this thing should have a name... "Circular array," maybe?
+Let's google it with adding `golang` to it.
+
+Voila! Here is a package in the standard library called `container/ring`!
+Let's see if it helps...
+
+Yes, probably it does.
+I just have to create a ring of months; then a ring of days...
+Maybe I should have several rings of days: for 30 days, 31 days, 28 days...
+Oh, and also 29 days for leap years!
+
+The only issue is that rings don't have beginnings and ends.
+They are rings, obviously.
+But I want to be able to point to a specific month and day.
+
+Here is a simple function I wrote to find a specific value in the ring:
+
+[source,go]
+----
+unc findRing(el string, r *ring.Ring) *ring.Ring {
+	var i int
+	for i = 0; i < r.Len(); i++ {
+		if r.Value == el {
+			break
+		} else {
+			r = r.Next()
+		}
+	}
+	if i == r.Len() {
+		return nil
+	} else {
+		return r
+	}
+}
+----
+
+Saved it here: https://go.dev/play/p/0UgpoUv0dFI
+
+Still, I'm not convinced. Maybe the approach with arrays will be easier.
+What if I use generics here?
+First time I would need generics.
+Will try tomorrow.
+
+*2023-08-19*
+
+I ended up creating my own package for that: https://github.com/pavelanni/ringslice.
+
+The `container/ring` package from standard library is good, but it's created for more dynamic situations where I want to add elements, connect rings, etc.
+In my case it's more static.
+
+So now I have `RingSlice` where I can use any indices and it always returns the right value from the slice.
+
+*Setting states*. This is what I added yesterday.
+I started writing the logic for setting the date: if month is set but day is not set... if day is not set, but month it set... if both are set... etc.
+It quickly became a long list of ifs that are very hard to understand.
+
+So I thought, it's just a set of states and I use switch clicks to go from one to another in a loop.
+I created a list of states and incremented the index with each click.
+Of course, using the `% len(list_of_states)` operation to make it a loop.
+Each state in the list contained only two booleans, but it can be anything.
+So, it looks like I just invented a simple Finite State Machine.
+
+*Back to simplicity*
+
+After writing the `ringslice` package I figured out that the code is becoming too complex.
+I went back to calculating the index.
+
+The index capping should work differently in two situations:
+
+- When we are changing the day, it should go over the number of days in the month and circle back to day 1.
+I.e. for April if it's 30 and I add a day, it should go to 1.
+- When we are changing the month, it should go down to the number of days in that month.
+I.e. if I set the day to 30 for April, and decided to change the month again and I switch to the month setting state,
+when I change to Feb, the day should go down to 29.
+Yes, leap years are not calculated yet, sorry.
+
+
+

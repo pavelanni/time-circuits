@@ -1,0 +1,4 @@
+github.com/pavelanni/tinygo-drivers/rotaryencoder v0.0.0-20230813234026-d978e2a95923 h1:KjqcFdu5WdbkHoDZtdXLqFugek5LLUF5UN2ZtbxIQXg=
+github.com/pavelanni/tinygo-drivers/rotaryencoder v0.0.0-20230813234026-d978e2a95923/go.mod h1:lPDAZcHJoO+9iBRHSBniSMd/6fvICcJJPr/cb14eh84=
+github.com/pavelanni/tinygo-drivers/tm1637 v0.0.0-20230813002143-4c86b787d857 h1:jHJNHH+0yXJ56sOcmGz0bNVHpJOLHWFclINAc/k5alo=
+github.com/pavelanni/tinygo-drivers/tm1637 v0.0.0-20230813002143-4c86b787d857/go.mod h1:nMBA37KrF6P5B9vFzAprHY57I7ObmNyiOKZbQ1nyLQk=

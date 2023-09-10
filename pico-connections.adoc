@@ -1,0 +1,50 @@
+= Pico connections
+
+This is a European version of the Time Machine that uses the ISO 8601 format for dates and times.
+In this implementation that means three 4-digit indicators in each row: `YYYY`, `MMDD`, `hh:mm`.
+
+== Destination time
+
+|===
+|Field |CLK |Data |Switch
+
+|Year Display |GP0 | GP1 |
+|Year Encoder |GP4 |GP5 |GP6
+|Date Display |GP2 | GP3 |
+|Date Encoder |GP21 |GP22 |GP26
+|Time Display |GP16 | GP17 |
+|Time Encoder |GP18 |GP19 |GP20
+
+|===
+
+
+== Present time
+
+Present time and Last time departed are served by the second Pico.
+
+|===
+|Field |CLK |Data |Switch
+
+|Year Display |GP0 | GP1 |
+|Year Encoder |GP4 |GP5 |GP6
+|Date Display |GP2 | GP3 |
+|Date Encoder |GP21 |GP22 |GP26
+|Time Display |GP16 | GP17 |
+|Time Encoder |GP18 |GP19 |GP20
+
+|===
+
+
+== Last time departed
+
+|===
+|Field |CLK |Data |Switch
+
+|Year Display |GP0 | GP1 |
+|Year Encoder |GP4 |GP5 |GP6
+|Date Display |GP2 | GP3 |
+|Date Encoder |GP21 |GP22 |GP26
+|Time Display |GP16 | GP17 |
+|Time Encoder |GP18 |GP19 |GP20
+
+|===
