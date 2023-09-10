@@ -7,6 +7,14 @@ import (
 	"github.com/pavelanni/tinygo-drivers/tm1637"
 )
 
+const (
+	yearDisplayClk = machine.GP0
+	yearDisplayDt  = machine.GP1
+	yearEncClk     = machine.GP4
+	yearEncDt      = machine.GP5
+	yearEncSwitch  = machine.GP6
+)
+
 // setYear sets the year value using a rotary encoder and displays it on a TM1637 device.
 //
 // It takes the following parameters:
@@ -48,10 +56,10 @@ func main() {
 	var yearIsSet bool = true
 	emptyChan := make(chan bool)
 
-	yearEnc := rotaryencoder.New(machine.GP7, machine.GP6, machine.GP8)
+	yearEnc := rotaryencoder.New(yearEncClk, yearEncDt, yearEncSwitch)
 	yearEnc.Configure()
 
-	yearDisplay := tm1637.New(machine.GP10, machine.GP11, 7) // clk, dio, brightness
+	yearDisplay := tm1637.New(yearDisplayClk, yearDisplayDt, 7) // clk, dio, brightness
 	yearDisplay.Configure()
 	yearDisplay.ClearDisplay()
 
