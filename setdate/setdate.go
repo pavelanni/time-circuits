@@ -1,38 +1,36 @@
-package main
+package setdate
 
 import (
-	"machine"
-
 	"github.com/pavelanni/tinygo-drivers/rotaryencoder"
 	"github.com/pavelanni/tinygo-drivers/tm1637"
 )
 
-type dateSetState struct {
+type DateSetState struct {
 	monthIsSet bool
 	dayIsSet   bool
 }
 
 // Yes, it's silly to list sequential numbers, but in general these slices can include month names, weekday names, etc.
 // As we circle around the slice indices, we can use them with any slices.
-var months = []uint8{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}
-var days = []uint8{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31}
-var daysInMonth = []int{31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}
+var Months = []uint8{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}
+var Days = []uint8{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31}
+var DaysInMonth = []int{31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}
 
 // dateSetStates is a slice of setting states which has three elements
 // - both month and day are set
 // - month is not set, day is set
 // - month is set, day is not set
 // Each click of the switch changes from one state to the next
-var dateSetStates = []dateSetState{
-	dateSetState{
+var DateSetStates = []DateSetState{
+	DateSetState{
 		monthIsSet: true,
 		dayIsSet:   true,
 	},
-	dateSetState{
+	DateSetState{
 		monthIsSet: false,
 		dayIsSet:   true,
 	},
-	dateSetState{
+	DateSetState{
 		monthIsSet: true,
 		dayIsSet:   false,
 	},
@@ -77,22 +75,22 @@ func capIdx(idx int, cap int, over bool) int {
 // - monthIdx: A pointer to the index of the current month.
 // - dayIdx: A pointer to the index of the current day.
 // - dss: A pointer to the dateSetState object that keeps track of which part of the date is being set.
-func setDate(enc *rotaryencoder.Device,
+func SetDate(enc *rotaryencoder.Device,
 	display *tm1637.Device,
 	monthIdx *int,
 	dayIdx *int,
-	dss *dateSetState) {
+	dss *DateSetState) {
 
-	display.DisplayClock(uint8(months[*monthIdx]), uint8(days[*dayIdx]), false)
+	display.DisplayClock(uint8(Months[*monthIdx]), uint8(Days[*dayIdx]), false)
 	for {
 		delta := <-enc.Dir
 		if !dss.monthIsSet {
-			*monthIdx = capIdx(*monthIdx+int(delta), len(months), true)
-			*dayIdx = capIdx(*dayIdx, daysInMonth[*monthIdx]-1, false)
+			*monthIdx = capIdx(*monthIdx+int(delta), len(Months), true)
+			*dayIdx = capIdx(*dayIdx, DaysInMonth[*monthIdx]-1, false)
 		} else if !dss.dayIsSet {
-			*dayIdx = capIdx(*dayIdx+int(delta), daysInMonth[*monthIdx], true)
+			*dayIdx = capIdx(*dayIdx+int(delta), DaysInMonth[*monthIdx], true)
 		}
-		display.DisplayClock(uint8(months[*monthIdx]), uint8(days[*dayIdx]), false)
+		display.DisplayClock(uint8(Months[*monthIdx]), uint8(Days[*dayIdx]), false)
 	}
 }
 
@@ -101,37 +99,14 @@ func setDate(enc *rotaryencoder.Device,
 // Parameters:
 // - enc: a pointer to the rotary encoder device.
 // - dss: a pointer to the date set state.
-func setDateState(enc *rotaryencoder.Device,
-	dss *dateSetState) {
+func SetDateState(enc *rotaryencoder.Device,
+	dss *DateSetState) {
 	var curStateIndex int
 	for {
 		if <-enc.Switch {
 			curStateIndex++
-			i := curStateIndex % len(dateSetStates) // cicrular around the array
-			*dss = dateSetStates[i]
+			i := curStateIndex % len(DateSetStates) // cicrular around the array
+			*dss = DateSetStates[i]
 		}
-	}
-}
-
-func main() {
-	emptyChan := make(chan bool)
-
-	monthIdx := 0
-	dayIdx := 0
-	dss := dateSetStates[0]
-	dateEnc := rotaryencoder.New(machine.GP7, machine.GP6, machine.GP8)
-	dateEnc.Configure()
-
-	dateDisplay := tm1637.New(machine.GP10, machine.GP11, 7) // clk, dio, brightness
-	dateDisplay.Configure()
-	dateDisplay.ClearDisplay()
-
-	go setDateState(&dateEnc, &dss)
-	go setDate(&dateEnc, &dateDisplay, &monthIdx, &dayIdx, &dss)
-
-	// Start the main loop.
-	// The blocking operation of reading from an empty channel allows the goroutines to run
-	for {
-		<-emptyChan
 	}
 }

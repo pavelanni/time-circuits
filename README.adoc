@@ -1,0 +1,5 @@
+= The Time Circuits
+
+This is my implementation of the link:https://backtothefuture.fandom.com/wiki/Time_circuits[time circuits] invented by Doc Brown.
+The main controllers used here are Raspberry Pi Pico.
+The code is written in Go and compiled for Pico using TinyGo.

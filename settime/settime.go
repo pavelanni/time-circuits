@@ -1,13 +1,11 @@
-package main
+package settime
 
 import (
-	"machine"
-
 	"github.com/pavelanni/tinygo-drivers/rotaryencoder"
 	"github.com/pavelanni/tinygo-drivers/tm1637"
 )
 
-type timeSetState struct {
+type TimeSetState struct {
 	hourIsSet   bool
 	minuteIsSet bool
 }
@@ -17,26 +15,26 @@ type timeSetState struct {
 // - hour is not set, minute is set
 // - hour is set, minute is not set
 // Each click of the switch changes from one state to the next
-var timeSetStates = []timeSetState{
-	timeSetState{
+var TimeSetStates = []TimeSetState{
+	TimeSetState{
 		hourIsSet:   true,
 		minuteIsSet: true,
 	},
-	timeSetState{
+	TimeSetState{
 		hourIsSet:   false,
 		minuteIsSet: true,
 	},
-	timeSetState{
+	TimeSetState{
 		hourIsSet:   true,
 		minuteIsSet: false,
 	},
 }
 
-func setTime(enc *rotaryencoder.Device,
+func SetTime(enc *rotaryencoder.Device,
 	display *tm1637.Device,
 	hour *uint8,
 	minute *uint8,
-	tss *timeSetState) {
+	tss *TimeSetState) {
 	display.DisplayClock(*hour, *minute, true)
 	for {
 		delta := <-enc.Dir
@@ -49,35 +47,14 @@ func setTime(enc *rotaryencoder.Device,
 	}
 }
 
-func setTimeState(enc *rotaryencoder.Device,
-	tss *timeSetState) {
+func SetTimeState(enc *rotaryencoder.Device,
+	tss *TimeSetState) {
 	var curStateIndex int
 	for {
 		if <-enc.Switch {
 			curStateIndex++
-			i := curStateIndex % len(timeSetStates) // cicrular around the array
-			*tss = timeSetStates[i]
+			i := curStateIndex % len(TimeSetStates) // cicrular around the array
+			*tss = TimeSetStates[i]
 		}
-	}
-}
-
-func main() {
-	emptyChan := make(chan bool)
-
-	hour := uint8(0)
-	minute := uint8(0)
-	tss := timeSetStates[0]
-	timeEnc := rotaryencoder.New(machine.GP7, machine.GP6, machine.GP8)
-	timeEnc.Configure()
-
-	timeDisplay := tm1637.New(machine.GP10, machine.GP11, 7) // clk, dio, brightness
-	timeDisplay.Configure()
-	timeDisplay.ClearDisplay()
-
-	go setTimeState(&timeEnc, &tss)
-	go setTime(&timeEnc, &timeDisplay, &hour, &minute, &tss)
-
-	for {
-		<-emptyChan
 	}
 }
