@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"machine"
 	"time"
 
@@ -29,40 +30,49 @@ const (
 	timeEncSwitch  = machine.GP20
 )
 
+const (
+	initialDest = "1985-10-26T01:22:00Z"
+)
+
 func main() {
-	var year int16 = 2023
-	var yearIsSet bool = true
 	emptyChan := make(chan bool)
 
+	// Set up year display and encoder
+	var yearIsSet bool = true
 	yearEnc := rotaryencoder.New(yearEncClk, yearEncDt, yearEncSwitch)
 	yearEnc.Configure()
-
 	yearDisplay := tm1637.New(yearDisplayClk, yearDisplayDt, 0) // clk, dio, brightness
 	yearDisplay.Configure()
 	yearDisplay.ClearDisplay()
 
-	monthIdx := 0
-	dayIdx := 0
+	// Set up date display and encoder
 	dss := setdate.DateSetStates[0]
 	dateEnc := rotaryencoder.New(dateEncClk, dateEncDt, dateEncSwitch)
 	dateEnc.Configure()
-
 	dateDisplay := tm1637.New(dateDisplayClk, dateDisplayDt, 0) // clk, dio, brightness
 	dateDisplay.Configure()
 	dateDisplay.ClearDisplay()
 
-	hour := uint8(0)
-	minute := uint8(0)
+	// Set up time display and encoder
 	tss := settime.TimeSetStates[0]
 	timeEnc := rotaryencoder.New(timeEncClk, timeEncDt, timeEncSwitch)
 	timeEnc.Configure()
-
 	timeDisplay := tm1637.New(timeDisplayClk, timeDisplayDt, 0) // clk, dio, brightness
 	timeDisplay.Configure()
 	timeDisplay.ClearDisplay()
 
+	// Display initial target date and time
+	timeDest, err := time.Parse(time.RFC3339, initialDest)
+	if err != nil {
+		log.Fatal(err)
+	}
+	year := int16(timeDest.Year())
+	monthIdx := int(timeDest.Month()) - 1
+	dayIdx := timeDest.Day() - 1
+	hour := uint8(timeDest.Hour())
+	minute := uint8(timeDest.Minute())
 	yearDisplay.DisplayNumber(year)
-	dateDisplay.DisplayClock(uint8(setdate.Months[monthIdx]), uint8(setdate.Days[dayIdx]), false)
+	dateDisplay.DisplayClock(uint8(monthIdx), uint8(dayIdx), false)
 	timeDisplay.DisplayClock(hour, minute, true)
 	go yearDisplay.FadeIn(4 * time.Second)
 	go dateDisplay.FadeIn(4 * time.Second)

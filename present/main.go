@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"machine"
 	"time"
 
@@ -26,6 +27,17 @@ const (
 func main() {
 	emptyChan := make(chan bool)
 
+	initialPresent := "1985-10-26T01:22:00Z"
+	initialLast := "1985-10-26T01:20:00Z"
+	tPresent, err := time.Parse(time.RFC3339, initialPresent)
+	if err != nil {
+		log.Fatal(err)
+	}
+	tLast, err := time.Parse(time.RFC3339, initialLast)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	yearPresentDisplay := tm1637.New(yearPresentDisplayClk, yearPresentDisplayDt, 0)
 	yearPresentDisplay.Configure()
 	yearPresentDisplay.ClearDisplay()
@@ -33,12 +45,16 @@ func main() {
 	yearLastDisplay.Configure()
 	yearLastDisplay.ClearDisplay()
 
-	var yearPresent int16 = 2023
-	var yearLast int16 = 2023
-	monthPresentIdx := 0
-	dayPresentIdx := 0
-	monthLastIdx := 0
-	dayLastIdx := 0
+	yearPresent := int16(tPresent.Year())
+	yearLast := int16(tLast.Year())
+	monthPresentIdx := int(tPresent.Month()) - 1
+	dayPresentIdx := tPresent.Day() - 1
+	monthLastIdx := int(tLast.Month()) - 1
+	dayLastIdx := tLast.Day() - 1
+	hourPresent := uint8(tPresent.Hour())
+	minutePresent := uint8(tPresent.Minute())
+	hourLast := uint8(tLast.Hour())
+	minuteLast := uint8(tLast.Minute())
 
 	datePresentDisplay := tm1637.New(datePresentDisplayClk, datePresentDisplayDt, 0)
 	datePresentDisplay.Configure()
@@ -46,11 +62,6 @@ func main() {
 	dateLastDisplay := tm1637.New(dateLastDisplayClk, dateLastDisplayDt, 0)
 	dateLastDisplay.Configure()
 	dateLastDisplay.ClearDisplay()
-
-	hourPresent := uint8(0)
-	minutePresent := uint8(0)
-	hourLast := uint8(0)
-	minuteLast := uint8(0)
 
 	timePresentDisplay := tm1637.New(timePresentDisplayClk, timePresentDisplayDt, 0) // clk, dio, brightness
 	timePresentDisplay.Configure()
