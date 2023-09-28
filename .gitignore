@@ -1,0 +1,5 @@
+*.lck
+fp-info-cache
+timecircuits-hardware-backups/
+*.hex
+*.bin

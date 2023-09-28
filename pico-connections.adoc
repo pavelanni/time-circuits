@@ -8,12 +8,12 @@ In this implementation that means three 4-digit indicators in each row: `YYYY`, 
 |===
 |Field |CLK |Data |Switch
 
-|Year Display |GP0 | GP1 |
+|Year Display |GP2 | GP3 |
 |Year Encoder |GP4 |GP5 |GP6
-|Date Display |GP2 | GP3 |
-|Date Encoder |GP21 |GP22 |GP26
-|Time Display |GP16 | GP17 |
-|Time Encoder |GP18 |GP19 |GP20
+|Date Display |GP7 | GP8 |
+|Date Encoder |GP9 |GP10 |GP11
+|Time Display |GP12 | GP13 |
+|Time Encoder |GP14 |GP15 |GP16
 
 |===
 
@@ -25,9 +25,9 @@ Present time and Last time departed are served by the second Pico.
 |===
 |Field |CLK |Data
 
-|Year Display |GP0 | GP1
-|Date Display |GP2 | GP3
-|Time Display |GP16 | GP17
+|Year Display |GP2 | GP3
+|Date Display |GP4 | GP5
+|Time Display |GP6 | GP7
 
 |===
 
@@ -37,8 +37,8 @@ Present time and Last time departed are served by the second Pico.
 |===
 |Field |CLK |Data
 
-|Year Display |GP4 | GP5
-|Date Display |GP6 | GP7
-|Time Display |GP18 | GP19
+|Year Display |GP8 | GP9
+|Date Display |GP10 | GP11
+|Time Display |GP12 | GP13
 
 |===

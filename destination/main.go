@@ -13,30 +13,59 @@ import (
 )
 
 const (
-	yearDisplayClk = machine.GP0
-	yearDisplayDt  = machine.GP1
+	yearDisplayClk = machine.GP2
+	yearDisplayDt  = machine.GP3
 	yearEncClk     = machine.GP4
 	yearEncDt      = machine.GP5
 	yearEncSwitch  = machine.GP6
-	dateDisplayClk = machine.GP2
-	dateDisplayDt  = machine.GP3
-	dateEncClk     = machine.GP21
-	dateEncDt      = machine.GP22
-	dateEncSwitch  = machine.GP26
-	timeDisplayClk = machine.GP16
-	timeDisplayDt  = machine.GP17
-	timeEncClk     = machine.GP18
-	timeEncDt      = machine.GP19
-	timeEncSwitch  = machine.GP20
+	dateDisplayClk = machine.GP7
+	dateDisplayDt  = machine.GP8
+	dateEncClk     = machine.GP9
+	dateEncDt      = machine.GP10
+	dateEncSwitch  = machine.GP11
+	timeDisplayClk = machine.GP12
+	timeDisplayDt  = machine.GP13
+	timeEncClk     = machine.GP14
+	timeEncDt      = machine.GP15
+	timeEncSwitch  = machine.GP16
 )
 
 const (
 	initialDest = "1985-10-26T01:22:00Z"
 )
 
-func main() {
-	emptyChan := make(chan bool)
+var (
+	uart      = machine.UART0
+	tx        = machine.UART0_TX_PIN
+	rx        = machine.UART0_RX_PIN
+	buttonPin = machine.GP18
+	bChan     = make(chan bool)
+)
 
+func configureUart() {
+	uart.Configure(machine.UARTConfig{
+		BaudRate: 115200,
+		TX:       tx,
+		RX:       rx})
+}
+
+func configureButton(p machine.Pin) {
+	p.Configure(machine.PinConfig{Mode: machine.PinInputPullup})
+	p.SetInterrupt(machine.PinFalling, buttonHandler)
+}
+
+func buttonHandler(p machine.Pin) {
+	if !p.Get() {
+		select {
+		case bChan <- true:
+		default:
+		}
+	}
+}
+
+func main() {
+	configureUart()
+	configureButton(buttonPin)
 	// Set up year display and encoder
 	var yearIsSet bool = true
 	yearEnc := rotaryencoder.New(yearEncClk, yearEncDt, yearEncSwitch)
@@ -61,7 +90,7 @@ func main() {
 	timeDisplay.Configure()
 	timeDisplay.ClearDisplay()
 
-	// Display initial target date and time
+	// Read time from the RFC3339 string
 	timeDest, err := time.Parse(time.RFC3339, initialDest)
 	if err != nil {
 		log.Fatal(err)
@@ -71,12 +100,14 @@ func main() {
 	dayIdx := timeDest.Day() - 1
 	hour := uint8(timeDest.Hour())
 	minute := uint8(timeDest.Minute())
+
+	// Display initial target date and time
 	yearDisplay.DisplayNumber(year)
 	dateDisplay.DisplayClock(uint8(monthIdx), uint8(dayIdx), false)
 	timeDisplay.DisplayClock(hour, minute, true)
-	go yearDisplay.FadeIn(4 * time.Second)
-	go dateDisplay.FadeIn(4 * time.Second)
-	go timeDisplay.FadeIn(4 * time.Second)
+	go yearDisplay.FadeIn(4*time.Second, 7)
+	go dateDisplay.FadeIn(4*time.Second, 7)
+	go timeDisplay.FadeIn(4*time.Second, 7)
 	go setyear.SetYearBoolean(&yearEnc, &yearIsSet)
 	go setyear.SetYear(&yearEnc, &yearDisplay, &year, &yearIsSet)
 	go setdate.SetDateState(&dateEnc, &dss)
@@ -85,6 +116,11 @@ func main() {
 	go settime.SetTime(&timeEnc, &timeDisplay, &hour, &minute, &tss)
 
 	for {
-		<-emptyChan
+		if <-bChan {
+			destDate := time.Date(int(year), time.Month(monthIdx+1), dayIdx+1, int(hour), int(minute), 0, 0, time.UTC)
+			message := destDate.Format(time.RFC3339) + "\n"
+			print(message)
+			uart.Write([]byte(message))
+		}
 	}
 }
