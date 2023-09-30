@@ -63,9 +63,47 @@ func buttonHandler(p machine.Pin) {
 	}
 }
 
+func readFlash(data []byte) {
+	println("reading flash...")
+	_, err := machine.Flash.ReadAt(data, 0)
+	if err != nil {
+		log.Fatal(err)
+	}
+	println("read from flash:", string(data))
+}
+
+func writeFlash(data []byte) {
+	println("erasing flash...")
+	needed := int64(len(initialDest) / int(machine.Flash.EraseBlockSize()))
+	if needed == 0 {
+		needed = 1
+	}
+	err := machine.Flash.EraseBlocks(0, needed)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	println("writing to flash: ", string(data))
+	_, err = machine.Flash.WriteAt(data, 0)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 func main() {
 	configureUart()
 	configureButton(buttonPin)
+
+	buffer := make([]byte, len(initialDest))
+	readFlash(buffer)
+	tDest, err := time.Parse(time.RFC3339, string(buffer[:20]))
+	if err != nil {
+		println("no destination time in flash, setting tDest to ", initialDest)
+		tDest, err = time.Parse(time.RFC3339, initialDest)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 	// Set up year display and encoder
 	var yearIsSet bool = true
 	yearEnc := rotaryencoder.New(yearEncClk, yearEncDt, yearEncSwitch)
@@ -90,16 +128,11 @@ func main() {
 	timeDisplay.Configure()
 	timeDisplay.ClearDisplay()
 
-	// Read time from the RFC3339 string
-	timeDest, err := time.Parse(time.RFC3339, initialDest)
-	if err != nil {
-		log.Fatal(err)
-	}
-	year := int16(timeDest.Year())
-	monthIdx := int(timeDest.Month()) - 1
-	dayIdx := timeDest.Day() - 1
-	hour := uint8(timeDest.Hour())
-	minute := uint8(timeDest.Minute())
+	year := int16(tDest.Year())
+	monthIdx := int(tDest.Month()) - 1
+	dayIdx := tDest.Day() - 1
+	hour := uint8(tDest.Hour())
+	minute := uint8(tDest.Minute())
 
 	// Display initial target date and time
 	yearDisplay.DisplayNumber(year)
@@ -119,7 +152,9 @@ func main() {
 		if <-bChan {
 			destDate := time.Date(int(year), time.Month(monthIdx+1), dayIdx+1, int(hour), int(minute), 0, 0, time.UTC)
 			message := destDate.Format(time.RFC3339) + "\n"
-			print(message)
+			println("sending to UART: ", message)
+			println("writing to flash: ", string(message))
+			writeFlash([]byte(message))
 			uart.Write([]byte(message))
 		}
 	}

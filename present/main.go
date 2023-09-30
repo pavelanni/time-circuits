@@ -8,7 +8,6 @@ import (
 
 	"github.com/pavelanni/bttf/setdate"
 	"github.com/pavelanni/tinygo-drivers/tm1637"
-	"tinygo.org/x/drivers/ds3231"
 )
 
 const (
@@ -30,8 +29,9 @@ const (
 )
 
 const (
-	initialPresent = "1985-10-26T01:22:00Z"
-	initialLast    = "1985-10-26T01:20:00Z"
+	initialPresent   = "1985-10-26T01:22:00Z"
+	initialLast      = "1985-10-26T01:20:00Z"
+	savedPresentLast = "1985-10-26T01:20:00Z 1985-10-26T01:22:00Z"
 )
 
 var (
@@ -58,10 +58,12 @@ func configureUart() {
 }
 
 func NewDisplay(yearClk, yearDt, dateClk, dateDt, timeClk, timeDt machine.Pin) Display {
+	const brightness uint8 = 7
+
 	d := Display{
-		Year: tm1637.New(yearClk, yearDt, 7),
-		Date: tm1637.New(dateClk, dateDt, 7),
-		Time: tm1637.New(timeClk, timeDt, 7),
+		Year: tm1637.New(yearClk, yearDt, brightness),
+		Date: tm1637.New(dateClk, dateDt, brightness),
+		Time: tm1637.New(timeClk, timeDt, brightness),
 	}
 	d.Year.Configure()
 	d.Date.Configure()
@@ -73,19 +75,7 @@ func NewDisplay(yearClk, yearDt, dateClk, dateDt, timeClk, timeDt machine.Pin) D
 
 }
 
-func (d Display) FadeIn(t time.Duration, brightness uint8) {
-	go d.Year.FadeIn(t, brightness)
-	go d.Date.FadeIn(t, brightness)
-	go d.Time.FadeIn(t, brightness)
-}
-
-func (d Display) Brightness(b uint8) {
-	d.Year.Brightness(b)
-	d.Date.Brightness(b)
-	d.Time.Brightness(b)
-}
-
-func (d Display) Show(t time.Time, brightness uint8) {
+func (d Display) Show(t time.Time) {
 	year := int16(t.Year())
 	monthIdx := int(t.Month()) - 1
 	dayIdx := t.Day() - 1
@@ -95,13 +85,11 @@ func (d Display) Show(t time.Time, brightness uint8) {
 	d.Year.DisplayNumber(year)
 	d.Date.DisplayClock(uint8(setdate.Months[monthIdx]), uint8(setdate.Days[dayIdx]), false)
 	d.Time.DisplayClock(hour, minute, true)
-	d.Brightness(brightness)
-	d.Brightness(brightness)
 }
 
 func readUart() {
 	for {
-		data := make([]byte, 1)
+		data := make([]byte, 0)
 		if uart.Buffered() > 0 {
 			discard, _ := uart.ReadByte()
 			println("discarded: ", discard)
@@ -127,55 +115,66 @@ func readUart() {
 	}
 }
 
-func showPresent(d Display, brightness uint8) {
+func showPresent(d Display) {
 	for {
-		d.Show(time.Now(), brightness)
+		d.Show(time.Now())
 		time.Sleep(5 * time.Second)
 	}
-
 }
 
-func configureRtc(scl, sda machine.Pin) *ds3231.Device {
-	machine.I2C0.Configure(machine.I2CConfig{
-		SCL: machine.GP21,
-		SDA: machine.GP20,
-	})
-	rtc := ds3231.New(machine.I2C0)
-	rtc.Configure()
-	running := rtc.IsRunning()
-	if !running {
-		err := rtc.SetRunning(true)
-		if err != nil {
-			println("Error configuring RTC")
-		}
+func readFlash(data []byte) {
+	println("reading flash...")
+	_, err := machine.Flash.ReadAt(data, 0)
+	if err != nil {
+		log.Fatal(err)
 	}
-	return &rtc
+	println("read from flash:", string(data))
 }
 
-func updateRtc(rtc *ds3231.Device) {
-	rtc.SetTime(time.Now())
-	println("set RTC to: ", time.Now().Format(time.RFC3339))
+func writeFlash(data []byte) {
+	println("erasing flash...")
+	needed := int64(len(savedPresentLast) / int(machine.Flash.EraseBlockSize()))
+	if needed == 0 {
+		needed = 1
+	}
+	err := machine.Flash.EraseBlocks(0, needed)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	println("writing to flash: ", string(data))
+	_, err = machine.Flash.WriteAt(data, 0)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func main() {
 	configureUart()
-	rtc := configureRtc(rtcScl, rtcSda)
 
-	tPresent, err := rtc.ReadTime()
-	if err != nil {
-		log.Fatal(err)
-	}
 	time.Sleep(2 * time.Second)
-	println("read from RTC: ", tPresent.Format(time.RFC3339))
+	buffer := make([]byte, len(savedPresentLast))
+	readFlash(buffer)
+	tPresent, err := time.Parse(time.RFC3339, string(buffer[:20]))
+	if err != nil {
+		println("no present time in flash, setting tPresent to ", initialPresent)
+		tPresent, err = time.Parse(time.RFC3339, initialPresent)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	tLast, err := time.Parse(time.RFC3339, string(buffer[21:]))
+	if err != nil {
+		println("no last departed time in flash, setting tLast to ", initialLast)
+		tLast, err = time.Parse(time.RFC3339, initialLast)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 	// update Now()
 	timeOfMeasurement := time.Now()
 	offset := tPresent.Sub(timeOfMeasurement)
 	runtime.AdjustTimeOffset(int64(offset))
-	// read tLast TODO: this should be read from a saved string from the previous run
-	tLast, err := time.Parse(time.RFC3339, initialLast)
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	// Configure displays
 	dPresent := NewDisplay(yearPresentDisplayClk,
@@ -191,14 +190,14 @@ func main() {
 		timeLastDisplayClk,
 		timeLastDisplayDt)
 
-	dPresent.Show(tPresent, 7)
-	dLast.Show(tLast, 7)
+	dPresent.Show(tPresent)
+	dLast.Show(tLast)
 
 	go readUart()
-	go showPresent(dPresent, 7)
+	go showPresent(dPresent)
 	for {
 		destRFC3339 := <-destChan
-		tDest, err := time.Parse(time.RFC3339, destRFC3339[1:]) // first byte is \x00 in the received string so we clip it
+		tDest, err := time.Parse(time.RFC3339, destRFC3339)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -208,9 +207,10 @@ func main() {
 		timeOfMeasurement := time.Now()
 		offset := tPresent.Sub(timeOfMeasurement)
 		runtime.AdjustTimeOffset(int64(offset))
-		updateRtc(rtc)
 		// update displays
-		dPresent.Show(time.Now(), 7)
-		dLast.Show(tLast, 7)
+		dPresent.Show(time.Now())
+		dLast.Show(tLast)
+		newPresentLast := tPresent.Format(time.RFC3339) + " " + tLast.Format(time.RFC3339)
+		writeFlash([]byte(newPresentLast))
 	}
 }
