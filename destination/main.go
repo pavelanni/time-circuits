@@ -73,7 +73,7 @@ func readFlash(data []byte) {
 }
 
 func writeFlash(data []byte) {
-	println("erasing flash...")
+	//println("erasing flash...")
 	needed := int64(len(initialDest) / int(machine.Flash.EraseBlockSize()))
 	if needed == 0 {
 		needed = 1
@@ -83,7 +83,7 @@ func writeFlash(data []byte) {
 		log.Fatal(err)
 	}
 
-	println("writing to flash: ", string(data))
+	//println("writing to flash: ", string(data))
 	_, err = machine.Flash.WriteAt(data, 0)
 	if err != nil {
 		log.Fatal(err)
@@ -153,9 +153,9 @@ func main() {
 			destDate := time.Date(int(year), time.Month(monthIdx+1), dayIdx+1, int(hour), int(minute), 0, 0, time.UTC)
 			message := destDate.Format(time.RFC3339) + "\n"
 			print("sending to UART: ", message)
+			uart.Write([]byte(message))
 			print("writing to flash: ", string(message))
 			writeFlash([]byte(message))
-			uart.Write([]byte(message))
 		}
 	}
 }
