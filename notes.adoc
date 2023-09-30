@@ -3,4 +3,6 @@
 *2023-09-16*: Apparently, somebody is selling the full kit already: https://circuitsetup.us/product/complete-time-circuits-display-kit/?v=dd65ef9a5579
 And the code is on GitHub: https://github.com/CircuitSetup/Time-Circuits-Display
 
-
+*2023-09-29*: DS3231 RTC can't understand more than two centuries.
+It stores only two digits of the year. So it's _truly_ real time clock and not very suitable for time travel.
+I think I have to store times in the flash memory between the boots.

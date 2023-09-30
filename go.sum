@@ -1,4 +1,8 @@
+github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 h1:El6M4kTTCOh6aBiKaUGG7oYTSPP8MxqL4YI3kZKwcP4=
+github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510/go.mod h1:pupxD2MaaD3pAXIBCelhxNneeOaAeabZDe5s4K6zSpQ=
 github.com/pavelanni/tinygo-drivers/rotaryencoder v0.0.0-20230927001734-11549fffd0b2 h1:NQ/bSOrO18noTNk35jmrbx0zaT8rp/eS+T+yjfmBJUQ=
 github.com/pavelanni/tinygo-drivers/rotaryencoder v0.0.0-20230927001734-11549fffd0b2/go.mod h1:lPDAZcHJoO+9iBRHSBniSMd/6fvICcJJPr/cb14eh84=
 github.com/pavelanni/tinygo-drivers/tm1637 v0.0.0-20230927001734-11549fffd0b2 h1:kPe66m04E7mwXRIWr9xRdPmrrDG7Vm6xyCBMRNLVX/E=
 github.com/pavelanni/tinygo-drivers/tm1637 v0.0.0-20230927001734-11549fffd0b2/go.mod h1:nMBA37KrF6P5B9vFzAprHY57I7ObmNyiOKZbQ1nyLQk=
+tinygo.org/x/drivers v0.26.0 h1:7KSIYssX0ki0dd7yBYkVZWSG0kt8vrZNS0It73TymcA=
+tinygo.org/x/drivers v0.26.0/go.mod h1:X7utcg3yfFUFuKLOMTZD56eztXMjpkcf8OHldfTBsjw=

@@ -8,6 +8,7 @@ import (
 
 	"github.com/pavelanni/bttf/setdate"
 	"github.com/pavelanni/tinygo-drivers/tm1637"
+	"tinygo.org/x/drivers/ds3231"
 )
 
 const (
@@ -23,6 +24,9 @@ const (
 	dateLastDisplayDt     = machine.GP11
 	timeLastDisplayClk    = machine.GP12
 	timeLastDisplayDt     = machine.GP13
+
+	rtcScl = machine.GP21
+	rtcSda = machine.GP20
 )
 
 const (
@@ -42,7 +46,7 @@ type Display struct {
 	Time tm1637.Device
 }
 
-var tInitial time.Time
+var tPresent, tLast time.Time
 
 var destChan = make(chan string)
 
@@ -104,19 +108,18 @@ func readUart() {
 		}
 
 		for {
+			time.Sleep(10 * time.Millisecond)
 			if uart.Buffered() > 0 {
 				inByte, _ := uart.ReadByte()
 				if inByte != byte('\n') {
 					data = append(data, inByte)
-					//runtime.Gosched()
 					continue
 				} else {
 					break
 				}
 			}
-			time.Sleep(10 * time.Millisecond)
 		}
-		println(string(data))
+		println("read from UART: ", string(data))
 		select {
 		case destChan <- string(data):
 		default:
@@ -132,13 +135,43 @@ func showPresent(d Display, brightness uint8) {
 
 }
 
+func configureRtc(scl, sda machine.Pin) *ds3231.Device {
+	machine.I2C0.Configure(machine.I2CConfig{
+		SCL: machine.GP21,
+		SDA: machine.GP20,
+	})
+	rtc := ds3231.New(machine.I2C0)
+	rtc.Configure()
+	running := rtc.IsRunning()
+	if !running {
+		err := rtc.SetRunning(true)
+		if err != nil {
+			println("Error configuring RTC")
+		}
+	}
+	return &rtc
+}
+
+func updateRtc(rtc *ds3231.Device) {
+	rtc.SetTime(time.Now())
+	println("set RTC to: ", time.Now().Format(time.RFC3339))
+}
+
 func main() {
 	configureUart()
+	rtc := configureRtc(rtcScl, rtcSda)
 
-	tPresent, err := time.Parse(time.RFC3339, initialPresent)
+	tPresent, err := rtc.ReadTime()
 	if err != nil {
 		log.Fatal(err)
 	}
+	time.Sleep(2 * time.Second)
+	println("read from RTC: ", tPresent.Format(time.RFC3339))
+	// update Now()
+	timeOfMeasurement := time.Now()
+	offset := tPresent.Sub(timeOfMeasurement)
+	runtime.AdjustTimeOffset(int64(offset))
+	// read tLast TODO: this should be read from a saved string from the previous run
 	tLast, err := time.Parse(time.RFC3339, initialLast)
 	if err != nil {
 		log.Fatal(err)
@@ -160,10 +193,7 @@ func main() {
 
 	dPresent.Show(tPresent, 7)
 	dLast.Show(tLast, 7)
-	//dPresent.FadeIn(4*time.Second, 7)
-	//dLast.FadeIn(4*time.Second, 7)
 
-	tInitial = tPresent // we use the global var tPresent here; for some reason nextTime doesn't work when I pass it as a param
 	go readUart()
 	go showPresent(dPresent, 7)
 	for {
@@ -172,11 +202,14 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		tLast = tPresent
-		tPresent = tDest
+		tLast = tPresent // last departed becomes the previous current
+		tPresent = tDest // the new current we get from the destination
+		// update Now()
 		timeOfMeasurement := time.Now()
 		offset := tPresent.Sub(timeOfMeasurement)
 		runtime.AdjustTimeOffset(int64(offset))
+		updateRtc(rtc)
+		// update displays
 		dPresent.Show(time.Now(), 7)
 		dLast.Show(tLast, 7)
 	}
