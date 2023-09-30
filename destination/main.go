@@ -152,8 +152,8 @@ func main() {
 		if <-bChan {
 			destDate := time.Date(int(year), time.Month(monthIdx+1), dayIdx+1, int(hour), int(minute), 0, 0, time.UTC)
 			message := destDate.Format(time.RFC3339) + "\n"
-			println("sending to UART: ", message)
-			println("writing to flash: ", string(message))
+			print("sending to UART: ", message)
+			print("writing to flash: ", string(message))
 			writeFlash([]byte(message))
 			uart.Write([]byte(message))
 		}
