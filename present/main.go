@@ -89,7 +89,7 @@ func (d Display) Show(t time.Time) {
 
 func readUart() {
 	for {
-		data := make([]byte, 0)
+		data := make([]byte, 1)
 		if uart.Buffered() > 0 {
 			discard, _ := uart.ReadByte()
 			println("discarded: ", discard)
@@ -117,8 +117,12 @@ func readUart() {
 
 func showPresent(d Display) {
 	for {
-		d.Show(time.Now())
-		time.Sleep(5 * time.Second)
+		tPresent = time.Now()
+		d.Show(tPresent)
+		// save tPresent and tLast to flash
+		newPresentLast := tPresent.Format(time.RFC3339) + " " + tLast.Format(time.RFC3339)
+		writeFlash([]byte(newPresentLast))
+		time.Sleep(1 * time.Second)
 	}
 }
 
@@ -150,12 +154,13 @@ func writeFlash(data []byte) {
 }
 
 func main() {
+	var err error
 	configureUart()
 
 	time.Sleep(2 * time.Second)
 	buffer := make([]byte, len(savedPresentLast))
 	readFlash(buffer)
-	tPresent, err := time.Parse(time.RFC3339, string(buffer[:20]))
+	tPresent, err = time.Parse(time.RFC3339, string(buffer[:20]))
 	if err != nil {
 		println("no present time in flash, setting tPresent to ", initialPresent)
 		tPresent, err = time.Parse(time.RFC3339, initialPresent)
@@ -163,7 +168,7 @@ func main() {
 			log.Fatal(err)
 		}
 	}
-	tLast, err := time.Parse(time.RFC3339, string(buffer[21:]))
+	tLast, err = time.Parse(time.RFC3339, string(buffer[21:])) // 21 because of the space
 	if err != nil {
 		println("no last departed time in flash, setting tLast to ", initialLast)
 		tLast, err = time.Parse(time.RFC3339, initialLast)
@@ -197,7 +202,7 @@ func main() {
 	go showPresent(dPresent)
 	for {
 		destRFC3339 := <-destChan
-		tDest, err := time.Parse(time.RFC3339, destRFC3339)
+		tDest, err := time.Parse(time.RFC3339, destRFC3339[1:])
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -207,8 +212,10 @@ func main() {
 		timeOfMeasurement := time.Now()
 		offset := tPresent.Sub(timeOfMeasurement)
 		runtime.AdjustTimeOffset(int64(offset))
+		println("tPresent: ", tPresent.Format(time.RFC3339))
+		println("time.Now() : ", time.Now().Format(time.RFC3339))
 		// update displays
-		dPresent.Show(time.Now())
+		dPresent.Show(tPresent)
 		dLast.Show(tLast)
 		newPresentLast := tPresent.Format(time.RFC3339) + " " + tLast.Format(time.RFC3339)
 		writeFlash([]byte(newPresentLast))
