@@ -136,7 +136,7 @@ func readFlash(data []byte) {
 }
 
 func writeFlash(data []byte) {
-	println("erasing flash...")
+	//println("erasing flash...")
 	needed := int64(len(savedPresentLast) / int(machine.Flash.EraseBlockSize()))
 	if needed == 0 {
 		needed = 1
@@ -146,7 +146,7 @@ func writeFlash(data []byte) {
 		log.Fatal(err)
 	}
 
-	println("writing to flash: ", string(data))
+	//println("writing to flash: ", string(data))
 	_, err = machine.Flash.WriteAt(data, 0)
 	if err != nil {
 		log.Fatal(err)
@@ -204,7 +204,7 @@ func main() {
 		destRFC3339 := <-destChan
 		tDest, err := time.Parse(time.RFC3339, destRFC3339[1:])
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
 		}
 		tLast = tPresent // last departed becomes the previous current
 		tPresent = tDest // the new current we get from the destination

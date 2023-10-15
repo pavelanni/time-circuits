@@ -1,6 +1,7 @@
 package setyear
 
 import (
+	"github.com/pavelanni/bttf/sound"
 	"github.com/pavelanni/tinygo-drivers/rotaryencoder"
 	"github.com/pavelanni/tinygo-drivers/tm1637"
 )
@@ -37,6 +38,9 @@ func SetYearBoolean(enc *rotaryencoder.Device, yearIsSet *bool) {
 		if <-enc.Switch {
 			*yearIsSet = !*yearIsSet
 			println("year is set: ", *yearIsSet)
+			if *yearIsSet {
+				go sound.Player.Play(sound.Effects["set"])
+			}
 		}
 	}
 }

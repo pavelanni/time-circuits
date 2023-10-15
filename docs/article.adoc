@@ -1,0 +1,26 @@
+= Learning Go with Time circuits
+
+I love learning new things.
+And the best way to learn is to work on a fun project.
+
+When I saw a set of 7-segment LED displays of different colors in one of the online shops
+it was hard to resists the urge to build a time machine _immediately_.
+Of course, I don't have enough plutonium-239 yet and I still have to build the flux capacitor,
+but at least I can start building the time circuits.
+
+I created my fist version several years ago, using a simple perfboard, Arduino IDE, and three Arduino Nanos.
+Something distracted me back then and I didn't finish it.
+But at least I have tested some basic logic of setting dates with rotary encoders.
+
+I discovered TinyGo recently and stared playing with it using Raspberry Pi Pico.
+With a large variety of devices supported in TinyGo there are plenty of things to experiment with.
+But I decided to get back to my Time circuits project and finish it this time.
+
+Go is so much better suited for projects like this due to its goroutines and channels.
+When in Arduino I had to poll all the encoders and their pushbuttons ("has anybody turned the shaft?"),
+in Go I'll just create a bunch of goroutines that will be sending messages through channels and it will be much easier.
+Or so I thought.
+
+Of course, the devil is in the details.
+Let me share what I learned while working on this project.
+

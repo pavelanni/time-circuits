@@ -8,6 +8,7 @@ import (
 	"github.com/pavelanni/bttf/setdate"
 	"github.com/pavelanni/bttf/settime"
 	"github.com/pavelanni/bttf/setyear"
+	"github.com/pavelanni/bttf/sound"
 	"github.com/pavelanni/tinygo-drivers/rotaryencoder"
 	"github.com/pavelanni/tinygo-drivers/tm1637"
 )
@@ -19,8 +20,8 @@ const (
 	yearEncDt      = machine.GP5
 	yearEncSwitch  = machine.GP6
 	dateDisplayClk = machine.GP7
-	dateDisplayDt  = machine.GP8
-	dateEncClk     = machine.GP9
+	dateDisplayDt  = machine.GP26
+	dateEncClk     = machine.GP21
 	dateEncDt      = machine.GP10
 	dateEncSwitch  = machine.GP11
 	timeDisplayClk = machine.GP12
@@ -92,7 +93,10 @@ func writeFlash(data []byte) {
 
 func main() {
 	configureUart()
+	sound.ConfigurePlayer()
 	configureButton(buttonPin)
+	time.Sleep(2 * time.Second)
+	go sound.Player.Play(sound.Effects["poweron"])
 
 	buffer := make([]byte, len(initialDest))
 	readFlash(buffer)
@@ -150,6 +154,7 @@ func main() {
 
 	for {
 		if <-bChan {
+			go sound.Player.Play(sound.Effects["jump"])
 			destDate := time.Date(int(year), time.Month(monthIdx+1), dayIdx+1, int(hour), int(minute), 0, 0, time.UTC)
 			message := destDate.Format(time.RFC3339) + "\n"
 			print("sending to UART: ", message)

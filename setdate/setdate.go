@@ -1,6 +1,7 @@
 package setdate
 
 import (
+	"github.com/pavelanni/bttf/sound"
 	"github.com/pavelanni/tinygo-drivers/rotaryencoder"
 	"github.com/pavelanni/tinygo-drivers/tm1637"
 )
@@ -107,6 +108,9 @@ func SetDateState(enc *rotaryencoder.Device,
 			curStateIndex++
 			i := curStateIndex % len(DateSetStates) // cicrular around the array
 			*dss = DateSetStates[i]
+			if i == 0 { // when both month and day are set
+				go sound.Player.Play(sound.Effects["set"])
+			}
 		}
 	}
 }

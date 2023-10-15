@@ -1,6 +1,7 @@
 package settime
 
 import (
+	"github.com/pavelanni/bttf/sound"
 	"github.com/pavelanni/tinygo-drivers/rotaryencoder"
 	"github.com/pavelanni/tinygo-drivers/tm1637"
 )
@@ -55,6 +56,9 @@ func SetTimeState(enc *rotaryencoder.Device,
 			curStateIndex++
 			i := curStateIndex % len(TimeSetStates) // cicrular around the array
 			*tss = TimeSetStates[i]
+			if i == 0 { // when both hour and minute are set
+				go sound.Player.Play(sound.Effects["set"])
+			}
 		}
 	}
 }
