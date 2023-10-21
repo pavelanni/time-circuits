@@ -52,7 +52,7 @@ var destChan = make(chan string)
 
 func configureUart() {
 	uart.Configure(machine.UARTConfig{
-		BaudRate: 115200,
+		BaudRate: 9600,
 		TX:       tx,
 		RX:       rx})
 }
