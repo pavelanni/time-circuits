@@ -38,6 +38,7 @@ var (
 	uart = machine.UART0
 	tx   = machine.UART0_TX_PIN
 	rx   = machine.UART0_RX_PIN
+	buf  = make([]byte, 24) // 24 bytes should be enough for the time string
 )
 
 type Display struct {
@@ -55,6 +56,7 @@ func configureUart() {
 		BaudRate: 9600,
 		TX:       tx,
 		RX:       rx})
+	uart.SetFormat(8, 2, 0)
 }
 
 func NewDisplay(yearClk, yearDt, dateClk, dateDt, timeClk, timeDt machine.Pin) Display {
@@ -89,29 +91,18 @@ func (d Display) Show(t time.Time) {
 
 func readUart() {
 	for {
-		data := make([]byte, 1)
-		if uart.Buffered() > 0 {
-			discard, _ := uart.ReadByte()
-			println("discarded: ", discard)
+		n, err := uart.Read(buf)
+		if err != nil {
+			log.Print(err)
 		}
-
-		for {
-			time.Sleep(10 * time.Millisecond)
-			if uart.Buffered() > 0 {
-				inByte, _ := uart.ReadByte()
-				if inByte != byte('\n') {
-					data = append(data, inByte)
-					continue
-				} else {
-					break
-				}
+		if n > 0 {
+			println("read from UART: ", n, " bytes, string: ", string(buf[:n]))
+			select {
+			case destChan <- string(buf[:n]):
+			default:
 			}
 		}
-		println("read from UART: ", string(data))
-		select {
-		case destChan <- string(data):
-		default:
-		}
+		time.Sleep(time.Millisecond * 100)
 	}
 }
 
@@ -202,7 +193,7 @@ func main() {
 	go showPresent(dPresent)
 	for {
 		destRFC3339 := <-destChan
-		tDest, err := time.Parse(time.RFC3339, destRFC3339[1:])
+		tDest, err := time.Parse(time.RFC3339, destRFC3339)
 		if err != nil {
 			log.Println(err)
 		}

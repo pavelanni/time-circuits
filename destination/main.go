@@ -50,6 +50,7 @@ func configureUart() {
 		BaudRate: 9600,
 		TX:       tx,
 		RX:       rx})
+	uart.SetFormat(8, 2, 0)
 }
 
 func configureButton(p machine.Pin) {
@@ -160,12 +161,12 @@ func main() {
 
 	for {
 		if <-bChan {
-			go sound.Player.Play(sound.Effects["jump"])
+			//go sound.Player.Play(sound.Effects["jump"])
 			destDate := time.Date(int(year), time.Month(monthIdx+1), dayIdx+1, int(hour), int(minute), 0, 0, time.UTC)
-			message := destDate.Format(time.RFC3339) + "\n"
-			print("sending to UART: ", message)
+			message := destDate.Format(time.RFC3339)
+			println("sending to UART: ", message)
 			uart.Write([]byte(message))
-			print("writing to flash: ", string(message))
+			println("writing to flash: ", string(message))
 			writeFlash([]byte(message))
 		}
 	}
