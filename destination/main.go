@@ -36,11 +36,13 @@ const (
 )
 
 var (
-	uart      = machine.UART0
-	tx        = machine.UART0_TX_PIN
-	rx        = machine.UART0_RX_PIN
-	buttonPin = machine.GP18
-	bChan     = make(chan bool)
+	uart             = machine.UART0
+	tx               = machine.UART0_TX_PIN
+	rx               = machine.UART0_RX_PIN
+	buttonPin        = machine.GP18
+	bChan            = make(chan bool)
+	lastClick        time.Time
+	debounceInterval time.Duration = 200 * time.Millisecond
 )
 
 func configureUart() {
@@ -57,9 +59,12 @@ func configureButton(p machine.Pin) {
 
 func buttonHandler(p machine.Pin) {
 	if !p.Get() {
-		select {
-		case bChan <- true:
-		default:
+		if time.Since(lastClick) > debounceInterval {
+			lastClick = time.Now()
+			select {
+			case bChan <- true:
+			default:
+			}
 		}
 	}
 }
@@ -95,6 +100,7 @@ func main() {
 	configureUart()
 	sound.ConfigurePlayer()
 	configureButton(buttonPin)
+	lastClick = time.Now()
 	time.Sleep(2 * time.Second)
 	go sound.Player.Play(sound.Effects["poweron"])
 
