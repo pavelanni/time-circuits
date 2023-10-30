@@ -35,6 +35,11 @@ const (
 	initialDest = "1985-10-26T01:22:00Z"
 )
 
+const (
+	STX = byte(0x02) // ASCII Start transmission
+	ETX = byte(0x03) // ASCII End transmission
+)
+
 var (
 	uart             = machine.UART0
 	tx               = machine.UART0_TX_PIN
@@ -95,6 +100,14 @@ func writeFlash(data []byte) {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func prepareString(s string) []byte {
+	buf := make([]byte, len(s)+2)
+	buf[0] = STX          // ASCII STX code -- start of transmission
+	buf[len(buf)-1] = ETX // ASCII ETX code -- end of transmission
+	copy(buf[1:len(buf)-1], s)
+	return buf
 }
 
 func main() {
@@ -163,11 +176,21 @@ func main() {
 		if <-bChan {
 			//go sound.Player.Play(sound.Effects["jump"])
 			destDate := time.Date(int(year), time.Month(monthIdx+1), dayIdx+1, int(hour), int(minute), 0, 0, time.UTC)
-			message := destDate.Format(time.RFC3339)
-			println("sending to UART: ", message)
-			uart.Write([]byte(message))
-			println("writing to flash: ", string(message))
-			writeFlash([]byte(message))
+			message := prepareString(destDate.Format(time.RFC3339))
+			println("sending to UART: ", string(message[1:len(message)-1]))
+			/*
+				for i := 0; i < len(message); i++ {
+					uart.WriteByte(message[i])
+					time.Sleep(5 * time.Microsecond)
+				}
+			*/
+			n, err := uart.Write(message)
+			if err != nil {
+				log.Println(err)
+			}
+			println("sent to UART: ", n, " bytes")
+			println("writing to flash: ", string(message[1:len(message)-1]))
+			writeFlash(message[1 : len(message)-1])
 		}
 	}
 }

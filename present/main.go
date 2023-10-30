@@ -29,16 +29,23 @@ const (
 )
 
 const (
+	initialDest      = "1985-10-26T01:22:00Z"
 	initialPresent   = "1985-10-26T01:22:00Z"
 	initialLast      = "1985-10-26T01:20:00Z"
 	savedPresentLast = "1985-10-26T01:20:00Z 1985-10-26T01:22:00Z"
 )
 
+const (
+	STX = byte(0x02) // ASCII Start transmission
+	ETX = byte(0x03) // ASCII End transmission
+)
+
 var (
-	uart = machine.UART0
-	tx   = machine.UART0_TX_PIN
-	rx   = machine.UART0_RX_PIN
-	buf  = make([]byte, 24) // 24 bytes should be enough for the time string
+	uart     = machine.UART0
+	tx       = machine.UART0_TX_PIN
+	rx       = machine.UART0_RX_PIN
+	buf      = make([]byte, 64) // why 64? just in case
+	flashBuf = make([]byte, len(savedPresentLast))
 )
 
 type Display struct {
@@ -84,25 +91,53 @@ func (d Display) Show(t time.Time) {
 	hour := uint8(t.Hour())
 	minute := uint8(t.Minute())
 
+	//println("displaying year: ", year)
 	d.Year.DisplayNumber(year)
+	//println("displaying month, day: ", setdate.Months[monthIdx], setdate.Days[dayIdx])
 	d.Date.DisplayClock(uint8(setdate.Months[monthIdx]), uint8(setdate.Days[dayIdx]), false)
+	//println("displaying hour, minute: ", hour, minute)
 	d.Time.DisplayClock(hour, minute, true)
 }
 
 func readUart() {
+	println("reading UART...")
 	for {
-		n, err := uart.Read(buf)
-		if err != nil {
-			log.Print(err)
-		}
-		if n > 0 {
-			println("read from UART: ", n, " bytes, string: ", string(buf[:n]))
-			select {
-			case destChan <- string(buf[:n]):
-			default:
+		time.Sleep(5 * time.Millisecond)
+		if uart.Buffered() > 0 {
+			inByte, err := uart.ReadByte()
+			if err != nil {
+				log.Println(err)
+			}
+			if inByte != STX { // waiting for the start of transmission
+				continue
 			}
 		}
-		time.Sleep(time.Millisecond * 100)
+		i := 0
+		for {
+			time.Sleep(50 * time.Microsecond)
+			if uart.Buffered() > 0 {
+				//println("in the buffer: ", uart.Buffered(), " bytes")
+				inByte, err := uart.ReadByte()
+				if err != nil {
+					log.Println(err)
+				}
+				if inByte != ETX {
+					buf[i] = inByte
+					i++
+					//println("read byte: ", inByte)
+					continue
+				} else {
+					break
+				}
+			}
+		}
+		println("read from UART: ", string(buf[:i]))
+		select {
+		case destChan <- string(buf[:i]):
+			println("sent to destination channel: ", string(buf[:i]))
+		default:
+			println("could not send to destination channel")
+		}
 	}
 }
 
@@ -134,24 +169,44 @@ func writeFlash(data []byte) {
 	}
 	err := machine.Flash.EraseBlocks(0, needed)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 
 	//println("writing to flash: ", string(data))
 	_, err = machine.Flash.WriteAt(data, 0)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
+}
+
+func cleanRFC3339(ts string) string {
+	// remove the initial characters to leave only the string ending with Z that is the RFC3339 format
+	// find the position of the first Z
+	var index int
+	for i, char := range ts {
+		if char == 'Z' {
+			index = i
+			break
+		}
+	}
+	if index < 19 {
+		return ""
+	}
+	return ts[index-19 : index+1] // only the length of the RFC3339
 }
 
 func main() {
 	var err error
+	var tDest time.Time
+	tDest, err = time.Parse(time.RFC3339, initialDest)
+	if err != nil {
+		log.Fatal(err) // wrong initialDest string
+	}
 	configureUart()
 
-	time.Sleep(2 * time.Second)
-	buffer := make([]byte, len(savedPresentLast))
-	readFlash(buffer)
-	tPresent, err = time.Parse(time.RFC3339, string(buffer[:20]))
+	time.Sleep(5 * time.Second)
+	readFlash(flashBuf)
+	tPresent, err = time.Parse(time.RFC3339, string(flashBuf[:20]))
 	if err != nil {
 		println("no present time in flash, setting tPresent to ", initialPresent)
 		tPresent, err = time.Parse(time.RFC3339, initialPresent)
@@ -159,7 +214,7 @@ func main() {
 			log.Fatal(err)
 		}
 	}
-	tLast, err = time.Parse(time.RFC3339, string(buffer[21:])) // 21 because of the space
+	tLast, err = time.Parse(time.RFC3339, string(flashBuf[21:])) // 21 because of the space between the dates
 	if err != nil {
 		println("no last departed time in flash, setting tLast to ", initialLast)
 		tLast, err = time.Parse(time.RFC3339, initialLast)
@@ -193,9 +248,15 @@ func main() {
 	go showPresent(dPresent)
 	for {
 		destRFC3339 := <-destChan
-		tDest, err := time.Parse(time.RFC3339, destRFC3339)
-		if err != nil {
-			log.Println(err)
+		println("destRFC3339: ", destRFC3339)
+		destRFC3339 = cleanRFC3339(destRFC3339)
+		if destRFC3339 == "" {
+			println("no destination time in UART, no change in tDest")
+		} else {
+			tDest, err = time.Parse(time.RFC3339, destRFC3339)
+			if err != nil {
+				log.Println(err)
+			}
 		}
 		tLast = tPresent // last departed becomes the previous current
 		tPresent = tDest // the new current we get from the destination
@@ -210,5 +271,7 @@ func main() {
 		dLast.Show(tLast)
 		newPresentLast := tPresent.Format(time.RFC3339) + " " + tLast.Format(time.RFC3339)
 		writeFlash([]byte(newPresentLast))
+		println("written to flash: ", newPresentLast)
+		time.Sleep(1 * time.Second)
 	}
 }

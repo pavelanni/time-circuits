@@ -1,6 +1,6 @@
 github.com/pavelanni/tinygo-drivers/dfplayermini v0.0.0-20231009011141-184a467a7a76 h1:9y0Era4nr22Gf+h38rkYJJO7gxek7DpgaRp2aKmc3Og=
 github.com/pavelanni/tinygo-drivers/dfplayermini v0.0.0-20231009011141-184a467a7a76/go.mod h1:H1j7vANwE1soyighvdCOMDLnQv7h/sEeIdBAduuSX5M=
-github.com/pavelanni/tinygo-drivers/rotaryencoder v0.0.0-20230927001734-11549fffd0b2 h1:NQ/bSOrO18noTNk35jmrbx0zaT8rp/eS+T+yjfmBJUQ=
-github.com/pavelanni/tinygo-drivers/rotaryencoder v0.0.0-20230927001734-11549fffd0b2/go.mod h1:lPDAZcHJoO+9iBRHSBniSMd/6fvICcJJPr/cb14eh84=
+github.com/pavelanni/tinygo-drivers/rotaryencoder v0.0.0-20231030011811-3ee4da2d0d28 h1:TP4GY0mG+fM26zxWOYrrf1HG6X6s/w7kR4zWKUZzNII=
+github.com/pavelanni/tinygo-drivers/rotaryencoder v0.0.0-20231030011811-3ee4da2d0d28/go.mod h1:lPDAZcHJoO+9iBRHSBniSMd/6fvICcJJPr/cb14eh84=
 github.com/pavelanni/tinygo-drivers/tm1637 v0.0.0-20230927001734-11549fffd0b2 h1:kPe66m04E7mwXRIWr9xRdPmrrDG7Vm6xyCBMRNLVX/E=
 github.com/pavelanni/tinygo-drivers/tm1637 v0.0.0-20230927001734-11549fffd0b2/go.mod h1:nMBA37KrF6P5B9vFzAprHY57I7ObmNyiOKZbQ1nyLQk=
